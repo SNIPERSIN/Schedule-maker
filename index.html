@@ -151,25 +151,68 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
 .day-card .dc-mtime { font-size: 9px; line-height: 1.15; opacity: 0.9; }
 .day-card .dc-off { font-size: 9.5px; opacity: 0.3; font-style: italic; margin-top: 6px; color: #fff; }
 
+/* Mobile view toggle (hidden on desktop) */
+.mobile-toggle { display: none; }
+
 @media (max-width: 900px) {
   body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-  .app, .templates-bar { width: 100% !important; min-width: unset !important; }
-  .preview-pane { padding: 20px 12px; }
-  .sidebar { padding: 16px 14px; }
+  .sidebar-col, .templates-bar { width: 100% !important; min-width: unset !important; }
+  .preview-pane { padding: 80px 12px 20px; }
+  .sidebar { padding: 16px 14px 40px; }
   #schedule-card { width: 100% !important; max-width: 380px; height: auto !important; aspect-ratio: 9/16; }
   .theme-grid { grid-template-columns: repeat(2, 1fr); }
   input[type=time] { width: 100%; }
+  .templates-bar { padding-top: 64px !important; }
+
+  /* Slide toggle at the top */
+  .mobile-toggle {
+    display: flex;
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(18, 8, 24, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--sidebar-border);
+    border-radius: 999px;
+    padding: 4px;
+    gap: 2px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  }
+  .mobile-toggle button {
+    background: none; border: none; color: #888;
+    padding: 9px 22px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: 'Poppins', Arial, sans-serif;
+    transition: all 0.15s;
+  }
+  .mobile-toggle button.active {
+    background: linear-gradient(135deg, var(--accent), #a00060);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(255,105,180,0.5);
+  }
+
+  /* View state — only one visible at a time on mobile */
+  body.view-preview .sidebar-col { display: none !important; }
+  body.view-edit .preview-pane { display: none !important; }
 }
 </style>
 </head>
-<body>
+<body class="view-edit">
+
+<!-- Mobile slide toggle -->
+<div class="mobile-toggle">
+  <button id="tog-edit"    class="active" onclick="setView('edit')">✏️ Edit</button>
+  <button id="tog-preview"              onclick="setView('preview')">👁 Preview</button>
+</div>
 
 <div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
   <!-- Templates bar sits above sidebar -->
   <div style="display:flex;flex:1;overflow:hidden">
 
     <!-- Left column: templates bar + sidebar -->
-    <div style="display:flex;flex-direction:column;width:400px;min-width:360px;">
+    <div class="sidebar-col" style="display:flex;flex-direction:column;width:400px;min-width:360px;">
       <div class="templates-bar" id="templates-bar">
         <span class="templates-bar-label">My Schedules</span>
         <div id="template-chips"></div>
@@ -722,6 +765,17 @@ async function downloadCard() {
   link.download = `${safeName}_iphone_story.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
+}
+
+// ──────────────────────────────────────────────
+// MOBILE VIEW TOGGLE
+// ──────────────────────────────────────────────
+function setView(view) {
+  document.body.classList.remove('view-edit', 'view-preview');
+  document.body.classList.add('view-' + view);
+  document.getElementById('tog-edit').classList.toggle('active', view === 'edit');
+  document.getElementById('tog-preview').classList.toggle('active', view === 'preview');
+  window.scrollTo(0, 0);
 }
 
 // ──────────────────────────────────────────────

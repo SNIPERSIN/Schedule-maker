@@ -8,21 +8,49 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Live Schedule"/>
 <meta name="theme-color" content="#120818"/>
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a0a1e'/%3E%3Ctext x='50%25' y='60%25' text-anchor='middle' font-size='110' fill='%23ff69b4'%3E📅%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" type="image/png" href="logo.png"/>
+<link rel="apple-touch-icon" href="logo.png"/>
 <title>Live Schedule Builder</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Pacifico&display=swap" rel="stylesheet"/>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --accent: #ff69b4;
-  --bg: #1a0a1e;
-  --sidebar-bg: #120818;
-  --sidebar-border: #3d1a4a;
-  --input-bg: #220d2e;
-  --input-border: #5a2070;
-  --block-bg: #1e0d28;
+  --accent: #ffffff;
+  --accent-soft: #888;
+  --bg: #0a0a0a;
+  --sidebar-bg: #000000;
+  --sidebar-border: #1a1a1a;
+  --input-bg: #141414;
+  --input-border: #262626;
+  --block-bg: #0f0f0f;
+  --text-dim: #666;
+  --text-mid: #999;
 }
 body { font-family: 'Poppins', Arial, sans-serif; background: var(--bg); color: #fff; min-height: 100vh; }
+/* Override pink accents with minimal grayscale palette */
+.sidebar h1 { color: #fff !important; }
+.sidebar p.sub { color: var(--text-dim) !important; }
+label.fl { color: var(--text-dim) !important; }
+.section-title { color: var(--text-mid) !important; }
+input:focus, textarea:focus { border-color: #fff !important; box-shadow: 0 0 0 2px rgba(255,255,255,0.08) !important; }
+.template-chip.active { border-color: #fff !important; background: rgba(255,255,255,0.08) !important; }
+.template-chip:hover { border-color: var(--text-mid) !important; }
+.btn-new-template:hover { border-color: #fff !important; color: #fff !important; }
+.btn-add-stream:hover { border-color: #fff !important; color: #fff !important; }
+.day-header input[type=checkbox] { accent-color: #fff !important; }
+.preview-label { color: var(--text-dim) !important; }
+.btn-save { border-color: #333 !important; color: #fff !important; background: #141414 !important; }
+.btn-save:hover { background: #1f1f1f !important; border-color: #fff !important; }
+.btn-download { background: #fff !important; color: #000 !important; box-shadow: 0 4px 20px rgba(255,255,255,0.08) !important; }
+.btn-download:hover { opacity: 0.9 !important; }
+.mobile-toggle { background: rgba(10,10,10,0.95) !important; border-color: #262626 !important; }
+.mobile-toggle button.active { background: #fff !important; color: #000 !important; box-shadow: 0 2px 10px rgba(255,255,255,0.15) !important; }
+.btn-rm:hover { background: #1f1f1f !important; color: #fff !important; }
+.logo-upload-area:hover { border-color: #fff !important; }
+.btn-clear-logo { color: var(--text-mid) !important; }
+.theme-btn.selected { border-color: #fff !important; box-shadow: 0 0 0 2px rgba(255,255,255,0.3) !important; }
+.font-btn.selected { border-color: #fff !important; background: rgba(255,255,255,0.06) !important; }
+.font-btn:hover { border-color: #fff !important; }
 
 /* ── Layout ── */
 .app { display: flex; min-height: 100vh; }
@@ -213,6 +241,13 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
 
     <!-- Left column: templates bar + sidebar -->
     <div class="sidebar-col" style="display:flex;flex-direction:column;width:400px;min-width:360px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px 12px;background:#000;border-bottom:1px solid #1a1a1a;">
+        <img src="logo.png" alt="" onerror="this.style.display='none'" style="width:36px;height:36px;object-fit:contain;"/>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#fff;letter-spacing:0.3px;">Live Schedule Builder</div>
+          <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Stream planner</div>
+        </div>
+      </div>
       <div class="templates-bar" id="templates-bar">
         <span class="templates-bar-label">My Schedules</span>
         <div id="template-chips"></div>
@@ -386,6 +421,37 @@ const THEMES = [
     accent: '#aa44ff',
     snameColor: '#ddaaff',
     stimeColor: '#cc88ff',
+  },
+  {
+    id: 'aura', label: '🌈 Aura',
+    btnStyle: 'background:linear-gradient(135deg,#d89b7a,#6b5a7a,#5a7a9b)',
+    cardBg: 'linear-gradient(180deg,#0a0a0a 0%,#000 100%)',
+    cardShadow: '0 0 80px rgba(180,120,200,0.12)',
+    cardBorder: '1px solid rgba(255,255,255,0.08)',
+    glowBefore: 'none',
+    glowAfter: 'none',
+    dayCard: 'radial-gradient(circle at 30% 40%,#e8c9a8 0%,#8a6b5a 50%,#2a1f1a 100%)',
+    dayCardEmpty: 'linear-gradient(145deg,#1a1a1a,#0a0a0a)',
+    dayCardBorder: 'rgba(255,255,255,0.06)',
+    dayCardShadow: '0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+    logoBadgeBg: 'radial-gradient(circle at 30% 30%,#e8c9a8,#8a6b5a)',
+    logoBadgeShadow: '0 4px 20px rgba(180,120,80,0.4)',
+    logoBadgeTextColor: '#8a6b5a',
+    subtitleColor: '#aaa',
+    deco: '✦◆✦',
+    accent: '#d89b7a',
+    snameColor: 'rgba(255,255,255,0.75)',
+    stimeColor: 'rgba(255,255,255,0.6)',
+    // Per-day soft gradients (cycled through)
+    perDayCards: [
+      'radial-gradient(ellipse at 30% 35%, #f0d9b8 0%, #8a6b5a 55%, #1a1410 100%)',   // cream
+      'radial-gradient(ellipse at 35% 40%, #ff9b7a 0%, #c04a3a 50%, #2a0a0a 100%)',   // coral
+      'radial-gradient(ellipse at 35% 35%, #d0d0d0 0%, #404040 55%, #0a0a0a 100%)',   // gray
+      'radial-gradient(ellipse at 30% 40%, #a8a8e0 0%, #5050a0 50%, #0f0f2a 100%)',   // indigo
+      'radial-gradient(ellipse at 35% 40%, #ffb8a8 0%, #e8708a 50%, #2a0f1a 100%)',   // peach/rose
+      'radial-gradient(ellipse at 30% 35%, #d8b8e8 0%, #7850a0 50%, #1a0a2a 100%)',   // lavender
+      'radial-gradient(ellipse at 35% 40%, #a8e0c8 0%, #4a8070 50%, #0a1a14 100%)',   // mint
+    ],
   },
   {
     id: 'midnight', label: '🖤 Midnight',
@@ -693,7 +759,7 @@ function slotRowHTML(di, si, s) {
   const roster = cur.hostList || [];
   // Chips for selected hosts
   const chipsHTML = selectedHosts.map((h, hi) => `
-    <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--accent),#a00060);color:#fff;font-size:11px;font-weight:600;padding:3px 4px 3px 9px;border-radius:999px;margin:0 4px 4px 0;">
+    <span style="display:inline-flex;align-items:center;gap:4px;background:#1f1f1f;border:1px solid #333;color:#fff;font-size:11px;font-weight:600;padding:3px 4px 3px 9px;border-radius:999px;margin:0 4px 4px 0;">
       ${h.replace(/</g,'&lt;')}
       <button onclick="rmHost(${di},${si},${hi})" style="background:rgba(0,0,0,0.3);border:none;color:#fff;cursor:pointer;width:16px;height:16px;border-radius:50%;font-size:10px;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;">✕</button>
     </span>`).join('');
@@ -705,12 +771,12 @@ function slotRowHTML(di, si, s) {
          <option value="">+ Add host...</option>
          ${available.map(h => `<option value="${h.replace(/"/g,'&quot;')}">${h.replace(/</g,'&lt;')}</option>`).join('')}
        </select>`
-    : `<span style="font-size:10px;color:#7a5a8a;font-style:italic;">${roster.length === 0 ? 'Add hosts to your roster above ↑' : 'All hosts added'}</span>`;
+    : `<span style="font-size:10px;color:var(--text-dim);font-style:italic;">${roster.length === 0 ? 'Add hosts to your roster above ↑' : 'All hosts added'}</span>`;
 
-  return `<div style="background:#160920;border:1px solid #2d1438;border-radius:8px;padding:8px;margin-bottom:7px;">
+  return `<div style="background:#0a0a0a;border:1px solid #1f1f1f;border-radius:8px;padding:8px;margin-bottom:7px;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
       <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSlot(${di},${si},this.checked)" style="width:15px;height:15px;accent-color:var(--accent);margin:0;"/>
-      <span style="font-size:11px;color:#c090d0;font-weight:700;letter-spacing:0.3px;">${SLOTS[si].label}</span>
+      <span style="font-size:11px;color:#aaa;font-weight:700;letter-spacing:0.3px;">${SLOTS[si].label}</span>
     </div>
     <div style="${s.enabled ? '' : 'opacity:0.35;pointer-events:none'};padding-left:22px;">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;">${chipsHTML}${dropdownHTML}</div>
@@ -735,14 +801,14 @@ function buildRoster() {
   if (!container) return;
   const list = cur.hostList || [];
   if (list.length === 0) {
-    container.innerHTML = `<div style="font-size:11px;color:#7a5a8a;font-style:italic;margin-bottom:8px;padding-left:2px;">No hosts yet. Add them below ↓</div>`;
+    container.innerHTML = `<div style="font-size:11px;color:var(--text-dim);font-style:italic;margin-bottom:8px;padding-left:2px;">No hosts yet. Add them below ↓</div>`;
     return;
   }
   container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
     ${list.map((h, i) => `
       <span style="display:inline-flex;align-items:center;gap:5px;background:var(--input-bg);border:1px solid var(--input-border);color:#fff;font-size:12px;padding:4px 5px 4px 10px;border-radius:999px;">
         ${h.replace(/</g,'&lt;')}
-        <button onclick="rmHostFromRoster(${i})" title="Remove" style="background:none;border:none;color:#9060a0;cursor:pointer;font-size:11px;padding:0 3px;">✕</button>
+        <button onclick="rmHostFromRoster(${i})" title="Remove" style="background:none;border:none;color:var(--text-mid);cursor:pointer;font-size:11px;padding:0 3px;">✕</button>
       </span>`).join('')}
   </div>`;
 }
@@ -793,9 +859,10 @@ function renderCard() {
   const topDays = cur.days.slice(0, 3);
   const botDays = cur.days.slice(3);
 
-  function dayCardHTML(day, label) {
+  function dayCardHTML(day, label, dayIdx) {
     day = migrateDay(day);
     const activeSlots = day.slots.filter(s => s.enabled);
+    const bg = theme.perDayCards ? theme.perDayCards[dayIdx % theme.perDayCards.length] : theme.dayCard;
     if (!day.enabled || activeSlots.length === 0) return `<div class="day-card" style="background:${theme.dayCardEmpty};border:1px solid ${theme.dayCardBorder};box-shadow:none;">
       <div class="dc-day">${label}</div><div class="dc-off">No stream</div></div>`;
     let inner = `<div class="dc-day">${label}</div>`;
@@ -805,7 +872,7 @@ function renderCard() {
       const hostLine = hosts.length ? hosts.join(' & ') : '—';
       inner += `<div class="dc-main">${hostLine}</div><div class="dc-mtime" style="color:${theme.snameColor}">${SLOTS[si].label}</div>`;
     });
-    return `<div class="day-card" style="background:${theme.dayCard};border:1px solid ${theme.dayCardBorder};box-shadow:${theme.dayCardShadow};">${inner}</div>`;
+    return `<div class="day-card" style="background:${bg};border:1px solid ${theme.dayCardBorder};box-shadow:${theme.dayCardShadow};">${inner}</div>`;
   }
 
   // Logo section
@@ -845,8 +912,8 @@ function renderCard() {
     <div class="card-title" style="font-family:${font.family};text-shadow:0 0 20px ${theme.accent}55">LIVESTREAM<br>SCHEDULE</div>
     <div class="card-subtitle-date" style="color:${theme.subtitleColor};font-family:${font.family}">${date}</div>
 
-    <div class="days-grid">${topDays.map((d,i) => dayCardHTML(d, DAYS[i])).join('')}</div>
-    <div class="days-grid-bottom">${botDays.map((d,i) => dayCardHTML(d, DAYS[3+i])).join('')}</div>
+    <div class="days-grid">${topDays.map((d,i) => dayCardHTML(d, DAYS[i], i)).join('')}</div>
+    <div class="days-grid-bottom">${botDays.map((d,i) => dayCardHTML(d, DAYS[3+i], 3+i)).join('')}</div>
   `;
 }
 

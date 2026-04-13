@@ -249,6 +249,14 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
         <div class="section-title">✍️ Font Style</div>
         <div class="font-grid" id="font-grid"></div>
 
+        <!-- ── Hosts roster ── -->
+        <div class="section-title">👥 Hosts Roster</div>
+        <div id="hosts-roster"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <input type="text" id="newHostInput" placeholder="Add host name..." onkeydown="if(event.key==='Enter'){addHostToRoster();event.preventDefault();}" style="flex:1;margin-bottom:0;"/>
+          <button class="btn-add-stream" style="width:auto;padding:6px 14px;" onclick="addHostToRoster()">+ Add</button>
+        </div>
+
         <!-- ── Days ── -->
         <div class="section-title">📅 Days &amp; Streams</div>
         <div id="days-container"></div>
@@ -416,20 +424,43 @@ const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun
 // ──────────────────────────────────────────────
 let logoDataUrl = null;
 
+// Three fixed time slots
+const SLOTS = [
+  { label: '9:30AM – 12:30PM' },
+  { label: '1:30PM – 4:30PM'  },
+  { label: '5PM – 8PM'        },
+];
+
 function defaultDays() {
+  const mkSlots = (enabled) => SLOTS.map((s, i) => ({ enabled: enabled[i] || false, hosts: [] }));
   return [
-    { enabled: true,  streams: [{ name: 'Main Stream', start: '13:00', end: '16:00' }] },
-    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '10:00', end: '12:00' }, { name: 'Main Stream', start: '13:00', end: '19:00' }] },
-    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '11:00', end: '13:00' }, { name: 'Main Stream', start: '14:00', end: '19:00' }] },
-    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:00' }, { name: 'Main Stream', start: '12:00', end: '19:00' }] },
-    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:45' }, { name: 'Main Stream', start: '12:00', end: '19:00' }] },
-    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:45' }, { name: 'Main Stream', start: '12:00', end: '17:00' }] },
-    { enabled: false, streams: [] },
+    { enabled: true,  slots: mkSlots([false, true,  true ]) },
+    { enabled: true,  slots: mkSlots([true,  true,  true ]) },
+    { enabled: true,  slots: mkSlots([true,  true,  true ]) },
+    { enabled: true,  slots: mkSlots([true,  true,  true ]) },
+    { enabled: true,  slots: mkSlots([true,  true,  true ]) },
+    { enabled: true,  slots: mkSlots([true,  true,  false]) },
+    { enabled: false, slots: mkSlots([false, false, false]) },
   ];
 }
 
+// Migrate old formats to current {slots, hosts[]} shape
+function migrateDay(day) {
+  if (day.slots && day.slots[0] && Array.isArray(day.slots[0].hosts)) return day;
+  if (day.slots) {
+    return {
+      enabled: day.enabled,
+      slots: day.slots.map(s => ({
+        enabled: s.enabled,
+        hosts: s.name ? [s.name] : [],
+      })),
+    };
+  }
+  return { enabled: day.enabled, slots: SLOTS.map(() => ({ enabled: false, hosts: [] })) };
+}
+
 function defaultState(name = '') {
-  return { brandName: name, dateRange: '', themeId: 'pink', fontId: 'poppins', logo: null, days: defaultDays() };
+  return { brandName: name, dateRange: '', themeId: 'pink', fontId: 'poppins', logo: null, hostList: [], days: defaultDays() };
 }
 
 // Load templates from localStorage
@@ -569,8 +600,10 @@ function syncToUI() {
     document.getElementById('logo-placeholder').style.display = '';
     document.getElementById('btn-clear-logo').style.display = 'none';
   }
+  if (!cur.hostList) cur.hostList = [];
   buildThemeGrid();
   buildFontGrid();
+  buildRoster();
   buildSidebar();
   renderCard();
 }
@@ -639,6 +672,8 @@ function buildSidebar() {
   const container = document.getElementById('days-container');
   container.innerHTML = '';
   cur.days.forEach((day, di) => {
+    day = migrateDay(day);
+    cur.days[di] = day;
     const block = document.createElement('div');
     block.className = 'day-block';
     block.innerHTML = `
@@ -647,27 +682,97 @@ function buildSidebar() {
         <span class="${day.enabled ? 'on' : 'off'}">${DAYS[di]}</span>
       </div>
       <div style="${day.enabled ? '' : 'opacity:0.3;pointer-events:none'}">
-        ${day.streams.map((s,si) => streamRowHTML(di,si,s)).join('')}
-        <button class="btn-add-stream" onclick="addStream(${di})">+ Add stream</button>
+        ${day.slots.map((s,si) => slotRowHTML(di,si,s)).join('')}
       </div>`;
     container.appendChild(block);
   });
 }
 
-function streamRowHTML(di, si, s) {
-  return `<div class="stream-row">
-    <input type="text" value="${s.name}" placeholder="Stream name" oninput="updStream(${di},${si},'name',this.value)"/>
-    <input type="time" value="${s.start}" oninput="updStream(${di},${si},'start',this.value)"/>
-    <span class="sep">–</span>
-    <input type="time" value="${s.end}" oninput="updStream(${di},${si},'end',this.value)"/>
-    <button class="btn-rm" onclick="rmStream(${di},${si})">✕</button>
+function slotRowHTML(di, si, s) {
+  const selectedHosts = (s.hosts || []).filter(h => h && h.trim());
+  const roster = cur.hostList || [];
+  // Chips for selected hosts
+  const chipsHTML = selectedHosts.map((h, hi) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--accent),#a00060);color:#fff;font-size:11px;font-weight:600;padding:3px 4px 3px 9px;border-radius:999px;margin:0 4px 4px 0;">
+      ${h.replace(/</g,'&lt;')}
+      <button onclick="rmHost(${di},${si},${hi})" style="background:rgba(0,0,0,0.3);border:none;color:#fff;cursor:pointer;width:16px;height:16px;border-radius:50%;font-size:10px;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;">✕</button>
+    </span>`).join('');
+
+  // Dropdown options (exclude already-selected)
+  const available = roster.filter(h => !selectedHosts.includes(h));
+  const dropdownHTML = available.length > 0
+    ? `<select onchange="addHostToSlot(${di},${si},this.value);this.value='';" style="font-size:12px;padding:5px 7px;background:var(--input-bg);border:1px solid var(--input-border);color:#fff;border-radius:6px;font-family:'Poppins',Arial,sans-serif;cursor:pointer;">
+         <option value="">+ Add host...</option>
+         ${available.map(h => `<option value="${h.replace(/"/g,'&quot;')}">${h.replace(/</g,'&lt;')}</option>`).join('')}
+       </select>`
+    : `<span style="font-size:10px;color:#7a5a8a;font-style:italic;">${roster.length === 0 ? 'Add hosts to your roster above ↑' : 'All hosts added'}</span>`;
+
+  return `<div style="background:#160920;border:1px solid #2d1438;border-radius:8px;padding:8px;margin-bottom:7px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSlot(${di},${si},this.checked)" style="width:15px;height:15px;accent-color:var(--accent);margin:0;"/>
+      <span style="font-size:11px;color:#c090d0;font-weight:700;letter-spacing:0.3px;">${SLOTS[si].label}</span>
+    </div>
+    <div style="${s.enabled ? '' : 'opacity:0.35;pointer-events:none'};padding-left:22px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;">${chipsHTML}${dropdownHTML}</div>
+    </div>
   </div>`;
 }
 
 function toggleDay(di, val) { cur.days[di].enabled = val; buildSidebar(); renderCard(); }
-function updStream(di, si, k, v) { cur.days[di].streams[si][k] = v; renderCard(); }
-function addStream(di) { cur.days[di].streams.push({name:'Stream',start:'12:00',end:'14:00'}); buildSidebar(); renderCard(); }
-function rmStream(di, si) { cur.days[di].streams.splice(si,1); buildSidebar(); renderCard(); }
+function toggleSlot(di, si, val) { cur.days[di].slots[si].enabled = val; buildSidebar(); renderCard(); }
+function addHostToSlot(di, si, name) {
+  if (!name) return;
+  if (!cur.days[di].slots[si].hosts) cur.days[di].slots[si].hosts = [];
+  cur.days[di].slots[si].hosts.push(name);
+  buildSidebar();
+  renderCard();
+}
+function rmHost(di, si, hi) { cur.days[di].slots[si].hosts.splice(hi, 1); buildSidebar(); renderCard(); }
+
+// ── Host roster management ──
+function buildRoster() {
+  const container = document.getElementById('hosts-roster');
+  if (!container) return;
+  const list = cur.hostList || [];
+  if (list.length === 0) {
+    container.innerHTML = `<div style="font-size:11px;color:#7a5a8a;font-style:italic;margin-bottom:8px;padding-left:2px;">No hosts yet. Add them below ↓</div>`;
+    return;
+  }
+  container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+    ${list.map((h, i) => `
+      <span style="display:inline-flex;align-items:center;gap:5px;background:var(--input-bg);border:1px solid var(--input-border);color:#fff;font-size:12px;padding:4px 5px 4px 10px;border-radius:999px;">
+        ${h.replace(/</g,'&lt;')}
+        <button onclick="rmHostFromRoster(${i})" title="Remove" style="background:none;border:none;color:#9060a0;cursor:pointer;font-size:11px;padding:0 3px;">✕</button>
+      </span>`).join('')}
+  </div>`;
+}
+
+function addHostToRoster() {
+  const input = document.getElementById('newHostInput');
+  const name = (input.value || '').trim();
+  if (!name) return;
+  if (!cur.hostList) cur.hostList = [];
+  if (cur.hostList.includes(name)) { input.value = ''; return; }
+  cur.hostList.push(name);
+  input.value = '';
+  buildRoster();
+  buildSidebar();
+}
+
+function rmHostFromRoster(i) {
+  const name = cur.hostList[i];
+  if (!confirm(`Remove "${name}" from the roster? This will also remove them from any slots they're assigned to.`)) return;
+  cur.hostList.splice(i, 1);
+  // Remove from all slots
+  cur.days.forEach(day => {
+    (day.slots || []).forEach(slot => {
+      if (slot.hosts) slot.hosts = slot.hosts.filter(h => h !== name);
+    });
+  });
+  buildRoster();
+  buildSidebar();
+  renderCard();
+}
 
 // ──────────────────────────────────────────────
 // CARD RENDER
@@ -689,16 +794,16 @@ function renderCard() {
   const botDays = cur.days.slice(3);
 
   function dayCardHTML(day, label) {
-    if (!day.enabled) return `<div class="day-card" style="background:${theme.dayCardEmpty};border:1px solid ${theme.dayCardBorder};box-shadow:none;">
+    day = migrateDay(day);
+    const activeSlots = day.slots.filter(s => s.enabled);
+    if (!day.enabled || activeSlots.length === 0) return `<div class="day-card" style="background:${theme.dayCardEmpty};border:1px solid ${theme.dayCardBorder};box-shadow:none;">
       <div class="dc-day">${label}</div><div class="dc-off">No stream</div></div>`;
     let inner = `<div class="dc-day">${label}</div>`;
-    day.streams.forEach(s => {
-      const isMain = s.name.toLowerCase().includes('main');
-      if (isMain) {
-        inner += `<div class="dc-main">${s.name}</div><div class="dc-mtime" style="color:${theme.snameColor}">${fmt(s.start)} – ${fmt(s.end)}</div>`;
-      } else {
-        inner += `<div class="dc-sname" style="color:${theme.snameColor}">${s.name}</div><div class="dc-stime" style="color:${theme.stimeColor}">${fmt(s.start)} – ${fmt(s.end)}</div>`;
-      }
+    day.slots.forEach((s, si) => {
+      if (!s.enabled) return;
+      const hosts = (s.hosts || []).filter(h => h && h.trim());
+      const hostLine = hosts.length ? hosts.join(' & ') : '—';
+      inner += `<div class="dc-main">${hostLine}</div><div class="dc-mtime" style="color:${theme.snameColor}">${SLOTS[si].label}</div>`;
     });
     return `<div class="day-card" style="background:${theme.dayCard};border:1px solid ${theme.dayCardBorder};box-shadow:${theme.dayCardShadow};">${inner}</div>`;
   }

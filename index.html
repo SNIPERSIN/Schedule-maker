@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Live Schedule"/>
+<meta name="theme-color" content="#120818"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a0a1e'/%3E%3Ctext x='50%25' y='60%25' text-anchor='middle' font-size='110' fill='%23ff69b4'%3E📅%3C/text%3E%3C/svg%3E"/>
+<title>Live Schedule Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Pacifico&display=swap" rel="stylesheet"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #ff69b4;
+  --bg: #1a0a1e;
+  --sidebar-bg: #120818;
+  --sidebar-border: #3d1a4a;
+  --input-bg: #220d2e;
+  --input-border: #5a2070;
+  --block-bg: #1e0d28;
+}
+body { font-family: 'Poppins', Arial, sans-serif; background: var(--bg); color: #fff; min-height: 100vh; }
+
+/* ── Layout ── */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 400px; min-width: 360px; background: var(--sidebar-bg); padding: 20px; overflow-y: auto; border-right: 2px solid var(--sidebar-border); display: flex; flex-direction: column; gap: 0; }
+.preview-pane { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; background: #0e0e14; overflow-y: auto; }
+
+/* ── Templates bar ── */
+.templates-bar { background: #0a0012; border-bottom: 2px solid var(--sidebar-border); padding: 12px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 400px; min-width: 360px; }
+.templates-bar-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+.template-chip { background: #1e0d28; border: 1px solid #3d1a4a; border-radius: 20px; padding: 5px 12px; font-size: 12px; color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.15s; }
+.template-chip:hover { border-color: var(--accent); color: #fff; }
+.template-chip.active { border-color: var(--accent); background: rgba(255,105,180,0.15); color: #fff; }
+.template-chip .del { color: #666; font-size: 10px; padding: 1px 3px; border-radius: 3px; }
+.template-chip .del:hover { color: #ff4466; background: rgba(255,50,80,0.2); }
+.btn-new-template { background: none; border: 1px dashed #444; color: #888; cursor: pointer; border-radius: 20px; padding: 5px 12px; font-size: 12px; white-space: nowrap; }
+.btn-new-template:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Sidebar sections ── */
+.section { margin-bottom: 0; }
+.section-title {
+  font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;
+  margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid var(--sidebar-border);
+  display: flex; align-items: center; gap: 6px;
+}
+.section-title:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+label.fl { display: block; font-size: 11px; color: #a080b0; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600; }
+input[type=text], input[type=time], textarea {
+  width: 100%; padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+  color: #fff; border-radius: 8px; font-size: 13px; font-family: 'Poppins', Arial, sans-serif; margin-bottom: 10px;
+}
+input[type=time] { width: auto; margin-bottom: 0; }
+textarea { resize: vertical; min-height: 50px; }
+input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,105,180,0.15); }
+
+/* ── Logo upload ── */
+.logo-upload-area {
+  border: 2px dashed var(--input-border); border-radius: 10px; padding: 12px;
+  text-align: center; cursor: pointer; margin-bottom: 10px; transition: all 0.15s;
+  position: relative; min-height: 70px; display: flex; align-items: center; justify-content: center;
+}
+.logo-upload-area:hover { border-color: var(--accent); }
+.logo-upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.logo-upload-area .placeholder { font-size: 12px; color: #7a5a8a; pointer-events: none; }
+.logo-preview { max-height: 50px; max-width: 150px; object-fit: contain; pointer-events: none; }
+.btn-clear-logo { font-size: 10px; color: #ff6699; background: none; border: none; cursor: pointer; margin-top: 4px; display: block; }
+
+/* ── Theme presets ── */
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.theme-btn {
+  border-radius: 10px; padding: 8px 6px; cursor: pointer; border: 2px solid transparent;
+  font-size: 11px; font-weight: 700; text-align: center; color: #fff; transition: all 0.15s;
+  font-family: 'Poppins', Arial, sans-serif;
+}
+.theme-btn:hover { transform: scale(1.04); }
+.theme-btn.selected { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.4); }
+
+/* ── Font presets ── */
+.font-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+.font-btn {
+  border-radius: 8px; padding: 10px 6px; cursor: pointer; border: 2px solid var(--input-border);
+  font-size: 14px; text-align: center; color: #fff; background: var(--input-bg); transition: all 0.15s;
+}
+.font-btn:hover { border-color: var(--accent); }
+.font-btn.selected { border-color: var(--accent); background: rgba(255,105,180,0.1); }
+
+/* ── Day blocks ── */
+.day-block { background: var(--block-bg); border-radius: 10px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--sidebar-border); }
+.day-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.day-header input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+.day-header span { font-size: 13px; font-weight: 700; }
+.day-header span.off { color: #444; }
+.day-header span.on { color: #fff; }
+.stream-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
+.stream-row input[type=text] { flex: 1; min-width: 90px; margin-bottom: 0; font-size: 12px; padding: 5px 7px; }
+.stream-row input[type=time] { padding: 5px 7px; font-size: 12px; }
+.stream-row .sep { color: #888; font-size: 11px; }
+.btn-rm { background: #2a0a3a; border: none; color: #9060a0; cursor: pointer; border-radius: 5px; padding: 4px 7px; font-size: 11px; }
+.btn-rm:hover { background: #5a0060; color: #ff69b4; }
+.btn-add-stream { background: none; border: 1px dashed var(--input-border); color: #7a5a8a; cursor: pointer; border-radius: 6px; padding: 4px 10px; font-size: 11px; width: 100%; margin-top: 2px; }
+.btn-add-stream:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Bottom buttons ── */
+.btn-save { width: 100%; padding: 11px; background: var(--input-bg); border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; margin-top: 16px; }
+.btn-save:hover { background: rgba(255,105,180,0.15); }
+.btn-download { width: 100%; padding: 11px; background: linear-gradient(135deg, var(--accent), #a00060); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; margin-top: 8px; box-shadow: 0 4px 20px rgba(255,105,180,0.3); }
+.btn-download:hover { opacity: 0.9; }
+
+/* ── Preview ── */
+.preview-label { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+/* ── Schedule Card ── iPhone Story 9:16 (1080×1920) ── */
+#schedule-card {
+  width: 405px;
+  height: 720px;
+  border-radius: 30px;
+  padding: 40px 28px 32px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: relative; z-index: 1; flex-shrink: 0; }
+.card-logo { max-height: 60px; max-width: 140px; object-fit: contain; }
+.card-logo-badge { border-radius: 12px; padding: 6px 11px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.card-logo-badge .lb-top { font-size: 10px; color: #fff; letter-spacing: 1px; font-weight: 900; }
+.card-logo-badge .lb-mid { font-size: 17px; color: #fff; font-weight: 900; letter-spacing: 1px; }
+.card-logo-badge .lb-bot { background: #fff; font-size: 8px; font-weight: 900; border-radius: 3px; padding: 1.5px 5px; letter-spacing: 1px; margin-top: 2px; }
+
+.card-accent-deco { display: flex; gap: 6px; align-items: center; }
+.card-deco-item { font-size: 20px; }
+
+.card-brand { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; position: relative; z-index: 1; flex-shrink: 0; }
+.card-title { font-size: 36px; font-weight: 900; color: #fff; text-transform: uppercase; line-height: 1; letter-spacing: 1.5px; position: relative; z-index: 1; flex-shrink: 0; }
+.card-subtitle-date { font-size: 23px; font-weight: 700; margin-bottom: 20px; position: relative; z-index: 1; flex-shrink: 0; }
+
+.days-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; position: relative; z-index: 1; flex-shrink: 0; }
+.days-grid-bottom { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 9px; position: relative; z-index: 1; flex-shrink: 0; }
+
+.day-card { border-radius: 15px; padding: 11px 8px; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.day-card .dc-day { font-size: 13px; font-weight: 900; color: #fff; margin-bottom: 3px; line-height: 1; }
+.day-card .dc-sname { font-size: 9px; font-weight: 700; line-height: 1.15; }
+.day-card .dc-stime { font-size: 8.5px; line-height: 1.15; margin-bottom: 3px; opacity: 0.9; }
+.day-card .dc-main { font-size: 10.5px; font-weight: 900; color: #fff; line-height: 1.1; margin-top: 2px; }
+.day-card .dc-mtime { font-size: 9px; line-height: 1.15; opacity: 0.9; }
+.day-card .dc-off { font-size: 9.5px; opacity: 0.3; font-style: italic; margin-top: 6px; color: #fff; }
+
+@media (max-width: 900px) {
+  body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .app, .templates-bar { width: 100% !important; min-width: unset !important; }
+  .preview-pane { padding: 20px 12px; }
+  .sidebar { padding: 16px 14px; }
+  #schedule-card { width: 100% !important; max-width: 380px; height: auto !important; aspect-ratio: 9/16; }
+  .theme-grid { grid-template-columns: repeat(2, 1fr); }
+  input[type=time] { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+  <!-- Templates bar sits above sidebar -->
+  <div style="display:flex;flex:1;overflow:hidden">
+
+    <!-- Left column: templates bar + sidebar -->
+    <div style="display:flex;flex-direction:column;width:400px;min-width:360px;">
+      <div class="templates-bar" id="templates-bar">
+        <span class="templates-bar-label">My Schedules</span>
+        <div id="template-chips"></div>
+        <button class="btn-new-template" onclick="newTemplate()">+ New</button>
+      </div>
+      <div class="sidebar" style="flex:1;overflow-y:auto">
+
+        <!-- ── Brand ── -->
+        <div class="section-title">🎯 Live Name</div>
+        <label class="fl">Live / Show Name</label>
+        <input type="text" id="brandName" placeholder="e.g. Laced Up Women's, Sneaker Vault..." oninput="renderCard()" />
+        <label class="fl">Week dates</label>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
+          <input type="date" id="startDate" onchange="updateDateRange()" style="flex:1;margin-bottom:0;padding:7px 8px;font-size:12px;"/>
+          <span style="color:#a080b0;font-size:12px;">→</span>
+          <input type="date" id="endDate" onchange="updateDateRange()" style="flex:1;margin-bottom:0;padding:7px 8px;font-size:12px;"/>
+        </div>
+        <input type="hidden" id="dateRange" />
+
+        <!-- ── Logo ── -->
+        <div class="section-title">🖼 Logo</div>
+        <div class="logo-upload-area" id="logo-drop">
+          <input type="file" accept="image/*" onchange="handleLogo(event)" />
+          <span class="placeholder" id="logo-placeholder">Click or drag your logo here</span>
+          <img id="logo-preview" class="logo-preview" style="display:none" />
+        </div>
+        <button class="btn-clear-logo" onclick="clearLogo()" id="btn-clear-logo" style="display:none">✕ Remove logo</button>
+
+        <!-- ── Theme ── -->
+        <div class="section-title">🎨 Vibe / Theme</div>
+        <div class="theme-grid" id="theme-grid"></div>
+
+        <!-- ── Font ── -->
+        <div class="section-title">✍️ Font Style</div>
+        <div class="font-grid" id="font-grid"></div>
+
+        <!-- ── Days ── -->
+        <div class="section-title">📅 Days &amp; Streams</div>
+        <div id="days-container"></div>
+
+        <button class="btn-save" onclick="saveTemplate()">💾 Save Template</button>
+        <button class="btn-download" onclick="downloadCard()">⬇ Export as Image</button>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-pane">
+      <div class="preview-label">✨ Live Preview</div>
+      <div id="schedule-card"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// ──────────────────────────────────────────────
+// THEMES
+// ──────────────────────────────────────────────
+const THEMES = [
+  {
+    id: 'pink', label: '🌸 Girly Pink',
+    btnStyle: 'background:linear-gradient(135deg,#e0108a,#a00060)',
+    cardBg: 'linear-gradient(160deg,#1a0024 0%,#0d0018 60%,#1a0024 100%)',
+    cardShadow: '0 0 60px rgba(255,105,180,0.3)',
+    cardBorder: '1px solid rgba(255,105,180,0.2)',
+    glowBefore: 'radial-gradient(circle,rgba(255,105,180,0.5) 0%,rgba(200,0,120,0.3) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(180,0,180,0.3) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#c8006e,#8e0050)',
+    dayCardEmpty: 'linear-gradient(145deg,#3d0040,#28002c)',
+    dayCardBorder: 'rgba(255,105,180,0.25)',
+    dayCardShadow: '0 4px 14px rgba(200,0,110,0.4)',
+    logoBadgeBg: 'linear-gradient(135deg,#e01090,#a00060)',
+    logoBadgeShadow: '0 2px 12px rgba(255,105,180,0.5)',
+    logoBadgeTextColor: '#e01090',
+    subtitleColor: '#ff9dd6',
+    deco: '✨💗✨',
+    accent: '#ff69b4',
+    snameColor: '#ffc8e8',
+    stimeColor: '#ffaacc',
+  },
+  {
+    id: 'fire', label: '🔥 Fire Red',
+    btnStyle: 'background:linear-gradient(135deg,#cc2200,#7a1000)',
+    cardBg: 'linear-gradient(160deg,#120000 0%,#0a0000 60%,#120000 100%)',
+    cardShadow: '0 0 60px rgba(255,80,0,0.3)',
+    cardBorder: '1px solid rgba(255,80,0,0.2)',
+    glowBefore: 'radial-gradient(circle,rgba(255,100,0,0.5) 0%,rgba(180,30,0,0.3) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(200,50,0,0.3) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#cc2200,#8a1500)',
+    dayCardEmpty: 'linear-gradient(145deg,#3a0000,#200000)',
+    dayCardBorder: 'rgba(255,80,0,0.25)',
+    dayCardShadow: '0 4px 14px rgba(180,30,0,0.5)',
+    logoBadgeBg: 'linear-gradient(135deg,#cc2200,#8a1500)',
+    logoBadgeShadow: '0 2px 12px rgba(255,80,0,0.5)',
+    logoBadgeTextColor: '#cc2200',
+    subtitleColor: '#ff9966',
+    deco: '🔥⚡🔥',
+    accent: '#ff4400',
+    snameColor: '#ffddcc',
+    stimeColor: '#ffbbaa',
+  },
+  {
+    id: 'ocean', label: '🌊 Ocean Blue',
+    btnStyle: 'background:linear-gradient(135deg,#0066cc,#003388)',
+    cardBg: 'linear-gradient(160deg,#000a1a 0%,#00060f 60%,#000a1a 100%)',
+    cardShadow: '0 0 60px rgba(0,120,255,0.3)',
+    cardBorder: '1px solid rgba(0,150,255,0.2)',
+    glowBefore: 'radial-gradient(circle,rgba(0,150,255,0.4) 0%,rgba(0,80,200,0.25) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(0,100,200,0.3) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#0055bb,#003380)',
+    dayCardEmpty: 'linear-gradient(145deg,#001840,#000d28)',
+    dayCardBorder: 'rgba(0,150,255,0.25)',
+    dayCardShadow: '0 4px 14px rgba(0,80,200,0.5)',
+    logoBadgeBg: 'linear-gradient(135deg,#0066cc,#003388)',
+    logoBadgeShadow: '0 2px 12px rgba(0,120,255,0.5)',
+    logoBadgeTextColor: '#0066cc',
+    subtitleColor: '#66ccff',
+    deco: '🌊💎🌊',
+    accent: '#0099ff',
+    snameColor: '#aaddff',
+    stimeColor: '#88ccff',
+  },
+  {
+    id: 'gold', label: '✨ Gold Luxury',
+    btnStyle: 'background:linear-gradient(135deg,#c8a000,#7a5a00)',
+    cardBg: 'linear-gradient(160deg,#120c00 0%,#080600 60%,#120c00 100%)',
+    cardShadow: '0 0 60px rgba(200,160,0,0.3)',
+    cardBorder: '1px solid rgba(220,180,0,0.2)',
+    glowBefore: 'radial-gradient(circle,rgba(220,180,0,0.4) 0%,rgba(160,120,0,0.25) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(180,130,0,0.3) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#b88a00,#7a5a00)',
+    dayCardEmpty: 'linear-gradient(145deg,#2a2000,#1a1400)',
+    dayCardBorder: 'rgba(220,180,0,0.25)',
+    dayCardShadow: '0 4px 14px rgba(160,120,0,0.5)',
+    logoBadgeBg: 'linear-gradient(135deg,#c8a000,#7a5a00)',
+    logoBadgeShadow: '0 2px 12px rgba(200,160,0,0.5)',
+    logoBadgeTextColor: '#c8a000',
+    subtitleColor: '#ffd766',
+    deco: '✨👑✨',
+    accent: '#ffd700',
+    snameColor: '#ffe8a0',
+    stimeColor: '#ffd080',
+  },
+  {
+    id: 'royalty', label: '👑 Royalty',
+    btnStyle: 'background:linear-gradient(135deg,#7700cc,#440080)',
+    cardBg: 'linear-gradient(160deg,#0e0020 0%,#060010 60%,#0e0020 100%)',
+    cardShadow: '0 0 60px rgba(150,0,255,0.3)',
+    cardBorder: '1px solid rgba(180,0,255,0.2)',
+    glowBefore: 'radial-gradient(circle,rgba(180,0,255,0.4) 0%,rgba(120,0,200,0.25) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(100,0,180,0.3) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#6600bb,#3d0080)',
+    dayCardEmpty: 'linear-gradient(145deg,#200040,#100028)',
+    dayCardBorder: 'rgba(180,0,255,0.25)',
+    dayCardShadow: '0 4px 14px rgba(120,0,200,0.5)',
+    logoBadgeBg: 'linear-gradient(135deg,#7700cc,#440080)',
+    logoBadgeShadow: '0 2px 12px rgba(150,0,255,0.5)',
+    logoBadgeTextColor: '#7700cc',
+    subtitleColor: '#cc88ff',
+    deco: '👑💜👑',
+    accent: '#aa44ff',
+    snameColor: '#ddaaff',
+    stimeColor: '#cc88ff',
+  },
+  {
+    id: 'midnight', label: '🖤 Midnight',
+    btnStyle: 'background:linear-gradient(135deg,#333,#111)',
+    cardBg: 'linear-gradient(160deg,#0a0a0a 0%,#000 60%,#0a0a0a 100%)',
+    cardShadow: '0 0 60px rgba(255,255,255,0.08)',
+    cardBorder: '1px solid rgba(255,255,255,0.1)',
+    glowBefore: 'radial-gradient(circle,rgba(255,255,255,0.08) 0%,rgba(150,150,150,0.05) 50%,transparent 70%)',
+    glowAfter: 'radial-gradient(circle,rgba(100,100,100,0.08) 0%,transparent 70%)',
+    dayCard: 'linear-gradient(145deg,#2a2a2a,#181818)',
+    dayCardEmpty: 'linear-gradient(145deg,#111,#0a0a0a)',
+    dayCardBorder: 'rgba(255,255,255,0.1)',
+    dayCardShadow: '0 4px 14px rgba(0,0,0,0.8)',
+    logoBadgeBg: 'linear-gradient(135deg,#444,#222)',
+    logoBadgeShadow: '0 2px 12px rgba(0,0,0,0.6)',
+    logoBadgeTextColor: '#aaa',
+    subtitleColor: '#aaa',
+    deco: '⭐🌙⭐',
+    accent: '#ffffff',
+    snameColor: '#ccc',
+    stimeColor: '#aaa',
+  },
+];
+
+const FONTS = [
+  { id: 'poppins',   label: 'Poppins',  family: "'Poppins', Arial, sans-serif",       preview: 'Bold' },
+  { id: 'bebas',     label: 'Bebas',    family: "'Bebas Neue', Arial, sans-serif",     preview: 'BEBAS' },
+  { id: 'playfair',  label: 'Playfair', family: "'Playfair Display', serif",           preview: 'Elegant' },
+  { id: 'pacifico',  label: 'Pacifico', family: "'Pacifico', cursive",                 preview: 'Pacifico' },
+];
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let logoDataUrl = null;
+
+function defaultDays() {
+  return [
+    { enabled: true,  streams: [{ name: 'Main Stream', start: '13:00', end: '16:00' }] },
+    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '10:00', end: '12:00' }, { name: 'Main Stream', start: '13:00', end: '19:00' }] },
+    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '11:00', end: '13:00' }, { name: 'Main Stream', start: '14:00', end: '19:00' }] },
+    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:00' }, { name: 'Main Stream', start: '12:00', end: '19:00' }] },
+    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:45' }, { name: 'Main Stream', start: '12:00', end: '19:00' }] },
+    { enabled: true,  streams: [{ name: 'Wearhouse Liquidations', start: '09:00', end: '11:45' }, { name: 'Main Stream', start: '12:00', end: '17:00' }] },
+    { enabled: false, streams: [] },
+  ];
+}
+
+function defaultState(name = '') {
+  return { brandName: name, dateRange: '', themeId: 'pink', fontId: 'poppins', logo: null, days: defaultDays() };
+}
+
+// Load templates from localStorage
+function loadTemplates() {
+  try { return JSON.parse(localStorage.getItem('scheduleTemplates') || '[]'); } catch { return []; }
+}
+function saveTemplates(tpls) {
+  localStorage.setItem('scheduleTemplates', JSON.stringify(tpls));
+}
+
+let templates = loadTemplates();
+let activeIdx = templates.length > 0 ? 0 : -1;
+
+// Current working state (loaded from active template or fresh)
+let cur = activeIdx >= 0 ? JSON.parse(JSON.stringify(templates[activeIdx].state)) : defaultState();
+
+// ──────────────────────────────────────────────
+// TEMPLATE MANAGEMENT
+// ──────────────────────────────────────────────
+function newTemplate() {
+  const name = prompt('Name this live (e.g. "Laced Up Women\'s", "Sneaker Vault"):');
+  if (!name) return;
+  const tpl = { name, state: defaultState(name) };
+  templates.push(tpl);
+  saveTemplates(templates);
+  activeIdx = templates.length - 1;
+  cur = JSON.parse(JSON.stringify(tpl.state));
+  logoDataUrl = cur.logo || null;
+  syncToUI();
+  renderTemplateChips();
+}
+
+function loadTemplate(idx) {
+  activeIdx = idx;
+  cur = JSON.parse(JSON.stringify(templates[idx].state));
+  logoDataUrl = cur.logo || null;
+  syncToUI();
+  renderTemplateChips();
+}
+
+function deleteTemplate(idx) {
+  if (!confirm(`Delete "${templates[idx].name}"?`)) return;
+  templates.splice(idx, 1);
+  saveTemplates(templates);
+  if (activeIdx >= templates.length) activeIdx = templates.length - 1;
+  if (templates.length > 0 && activeIdx >= 0) {
+    cur = JSON.parse(JSON.stringify(templates[activeIdx].state));
+    logoDataUrl = cur.logo || null;
+    syncToUI();
+  } else {
+    activeIdx = -1;
+    cur = defaultState();
+    logoDataUrl = null;
+    syncToUI();
+  }
+  renderTemplateChips();
+}
+
+function saveTemplate() {
+  // Snapshot logo into state
+  cur.logo = logoDataUrl;
+  cur.brandName = document.getElementById('brandName').value;
+  cur.dateRange = document.getElementById('dateRange').value;
+
+  if (activeIdx >= 0) {
+    templates[activeIdx].state = JSON.parse(JSON.stringify(cur));
+    saveTemplates(templates);
+    flashSaved();
+  } else {
+    const name = prompt('Name this live schedule:');
+    if (!name) return;
+    templates.push({ name, state: JSON.parse(JSON.stringify(cur)) });
+    saveTemplates(templates);
+    activeIdx = templates.length - 1;
+    renderTemplateChips();
+    flashSaved();
+  }
+}
+
+function flashSaved() {
+  const btn = document.querySelector('.btn-save');
+  const orig = btn.textContent;
+  btn.textContent = '✅ Saved!';
+  setTimeout(() => { btn.textContent = orig; }, 1500);
+}
+
+function renderTemplateChips() {
+  const container = document.getElementById('template-chips');
+  container.innerHTML = '';
+  templates.forEach((tpl, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'template-chip' + (i === activeIdx ? ' active' : '');
+    chip.innerHTML = `<span onclick="loadTemplate(${i})">${tpl.name}</span><span class="del" onclick="deleteTemplate(${i})">✕</span>`;
+    container.appendChild(chip);
+  });
+}
+
+// ──────────────────────────────────────────────
+// SYNC UI ↔ STATE
+// ──────────────────────────────────────────────
+function formatDateRange(startISO, endISO) {
+  if (!startISO || !endISO) return '';
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const s = new Date(startISO + 'T00:00:00');
+  const e = new Date(endISO + 'T00:00:00');
+  const sM = MONTHS[s.getMonth()], eM = MONTHS[e.getMonth()];
+  const sY = s.getFullYear(), eY = e.getFullYear();
+  if (sY !== eY) return `${sM} ${s.getDate()}, ${sY} – ${eM} ${e.getDate()}, ${eY}`;
+  if (sM === eM) return `${sM} ${s.getDate()}–${e.getDate()}`;
+  return `${sM} ${s.getDate()} – ${eM} ${e.getDate()}`;
+}
+
+function updateDateRange() {
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+  cur.startDate = s;
+  cur.endDate = e;
+  const formatted = formatDateRange(s, e);
+  document.getElementById('dateRange').value = formatted;
+  cur.dateRange = formatted;
+  renderCard();
+}
+
+function syncToUI() {
+  document.getElementById('brandName').value = cur.brandName || '';
+  document.getElementById('startDate').value = cur.startDate || '';
+  document.getElementById('endDate').value = cur.endDate || '';
+  document.getElementById('dateRange').value = cur.dateRange || formatDateRange(cur.startDate, cur.endDate) || '';
+  // logo
+  if (logoDataUrl) {
+    document.getElementById('logo-preview').src = logoDataUrl;
+    document.getElementById('logo-preview').style.display = '';
+    document.getElementById('logo-placeholder').style.display = 'none';
+    document.getElementById('btn-clear-logo').style.display = '';
+  } else {
+    document.getElementById('logo-preview').style.display = 'none';
+    document.getElementById('logo-placeholder').style.display = '';
+    document.getElementById('btn-clear-logo').style.display = 'none';
+  }
+  buildThemeGrid();
+  buildFontGrid();
+  buildSidebar();
+  renderCard();
+}
+
+// ──────────────────────────────────────────────
+// LOGO
+// ──────────────────────────────────────────────
+function handleLogo(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    logoDataUrl = ev.target.result;
+    document.getElementById('logo-preview').src = logoDataUrl;
+    document.getElementById('logo-preview').style.display = '';
+    document.getElementById('logo-placeholder').style.display = 'none';
+    document.getElementById('btn-clear-logo').style.display = '';
+    renderCard();
+  };
+  reader.readAsDataURL(file);
+}
+function clearLogo() {
+  logoDataUrl = null;
+  document.getElementById('logo-preview').style.display = 'none';
+  document.getElementById('logo-placeholder').style.display = '';
+  document.getElementById('btn-clear-logo').style.display = 'none';
+  renderCard();
+}
+
+// ──────────────────────────────────────────────
+// THEME
+// ──────────────────────────────────────────────
+function buildThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = '';
+  THEMES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'theme-btn' + (cur.themeId === t.id ? ' selected' : '');
+    btn.style.cssText = t.btnStyle;
+    btn.textContent = t.label;
+    btn.onclick = () => { cur.themeId = t.id; buildThemeGrid(); renderCard(); };
+    grid.appendChild(btn);
+  });
+}
+
+// ──────────────────────────────────────────────
+// FONT
+// ──────────────────────────────────────────────
+function buildFontGrid() {
+  const grid = document.getElementById('font-grid');
+  grid.innerHTML = '';
+  FONTS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'font-btn' + (cur.fontId === f.id ? ' selected' : '');
+    btn.style.fontFamily = f.family;
+    btn.textContent = f.preview;
+    btn.onclick = () => { cur.fontId = f.id; buildFontGrid(); renderCard(); };
+    grid.appendChild(btn);
+  });
+}
+
+// ──────────────────────────────────────────────
+// DAYS SIDEBAR
+// ──────────────────────────────────────────────
+function buildSidebar() {
+  const container = document.getElementById('days-container');
+  container.innerHTML = '';
+  cur.days.forEach((day, di) => {
+    const block = document.createElement('div');
+    block.className = 'day-block';
+    block.innerHTML = `
+      <div class="day-header">
+        <input type="checkbox" ${day.enabled ? 'checked' : ''} onchange="toggleDay(${di},this.checked)"/>
+        <span class="${day.enabled ? 'on' : 'off'}">${DAYS[di]}</span>
+      </div>
+      <div style="${day.enabled ? '' : 'opacity:0.3;pointer-events:none'}">
+        ${day.streams.map((s,si) => streamRowHTML(di,si,s)).join('')}
+        <button class="btn-add-stream" onclick="addStream(${di})">+ Add stream</button>
+      </div>`;
+    container.appendChild(block);
+  });
+}
+
+function streamRowHTML(di, si, s) {
+  return `<div class="stream-row">
+    <input type="text" value="${s.name}" placeholder="Stream name" oninput="updStream(${di},${si},'name',this.value)"/>
+    <input type="time" value="${s.start}" oninput="updStream(${di},${si},'start',this.value)"/>
+    <span class="sep">–</span>
+    <input type="time" value="${s.end}" oninput="updStream(${di},${si},'end',this.value)"/>
+    <button class="btn-rm" onclick="rmStream(${di},${si})">✕</button>
+  </div>`;
+}
+
+function toggleDay(di, val) { cur.days[di].enabled = val; buildSidebar(); renderCard(); }
+function updStream(di, si, k, v) { cur.days[di].streams[si][k] = v; renderCard(); }
+function addStream(di) { cur.days[di].streams.push({name:'Stream',start:'12:00',end:'14:00'}); buildSidebar(); renderCard(); }
+function rmStream(di, si) { cur.days[di].streams.splice(si,1); buildSidebar(); renderCard(); }
+
+// ──────────────────────────────────────────────
+// CARD RENDER
+// ──────────────────────────────────────────────
+function fmt(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const ap = h < 12 ? 'AM' : 'PM';
+  const hh = h % 12 || 12;
+  return m === 0 ? `${hh}${ap}` : `${hh}:${String(m).padStart(2,'0')}${ap}`;
+}
+
+function renderCard() {
+  const brand   = document.getElementById('brandName')?.value || '';
+  const date    = document.getElementById('dateRange')?.value || '';
+  const theme   = THEMES.find(t => t.id === cur.themeId) || THEMES[0];
+  const font    = FONTS.find(f => f.id === cur.fontId) || FONTS[0];
+  const topDays = cur.days.slice(0, 3);
+  const botDays = cur.days.slice(3);
+
+  function dayCardHTML(day, label) {
+    if (!day.enabled) return `<div class="day-card" style="background:${theme.dayCardEmpty};border:1px solid ${theme.dayCardBorder};box-shadow:none;">
+      <div class="dc-day">${label}</div><div class="dc-off">No stream</div></div>`;
+    let inner = `<div class="dc-day">${label}</div>`;
+    day.streams.forEach(s => {
+      const isMain = s.name.toLowerCase().includes('main');
+      if (isMain) {
+        inner += `<div class="dc-main">${s.name}</div><div class="dc-mtime" style="color:${theme.snameColor}">${fmt(s.start)} – ${fmt(s.end)}</div>`;
+      } else {
+        inner += `<div class="dc-sname" style="color:${theme.snameColor}">${s.name}</div><div class="dc-stime" style="color:${theme.stimeColor}">${fmt(s.start)} – ${fmt(s.end)}</div>`;
+      }
+    });
+    return `<div class="day-card" style="background:${theme.dayCard};border:1px solid ${theme.dayCardBorder};box-shadow:${theme.dayCardShadow};">${inner}</div>`;
+  }
+
+  // Logo section
+  let logoHTML = '';
+  if (logoDataUrl) {
+    logoHTML = `<img src="${logoDataUrl}" class="card-logo" style="max-height:52px;max-width:130px;object-fit:contain;"/>`;
+  } else if (brand) {
+    const parts = brand.split(' ');
+    const top = parts.slice(0,-1).join(' ') || brand;
+    const bot = parts.slice(-1)[0] || '';
+    logoHTML = `<div class="card-logo-badge" style="background:${theme.logoBadgeBg};box-shadow:${theme.logoBadgeShadow};">
+      <span class="lb-top">${top}</span>
+      <span class="lb-mid" style="font-family:${font.family}">${bot}</span>
+      <span class="lb-bot" style="color:${theme.logoBadgeTextColor}">LIVE</span>
+    </div>`;
+  }
+
+  const decoItems = theme.deco.match(/./gu) || [];
+  const decoHTML = decoItems.map(d => `<span class="card-deco-item">${d}</span>`).join('');
+
+  const card = document.getElementById('schedule-card');
+  card.style.background = theme.cardBg;
+  card.style.boxShadow  = theme.cardShadow;
+  card.style.border     = theme.cardBorder;
+  card.style.fontFamily = font.family;
+
+  card.innerHTML = `
+    <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:${theme.glowBefore};border-radius:50%;z-index:0;pointer-events:none;"></div>
+    <div style="position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;background:${theme.glowAfter};border-radius:50%;z-index:0;pointer-events:none;"></div>
+
+    <div class="card-top">
+      ${logoHTML}
+      <div class="card-accent-deco">${decoHTML}</div>
+    </div>
+
+    ${brand ? `<div class="card-brand" style="color:${theme.accent};font-family:${font.family}">${brand.toUpperCase()}</div>` : ''}
+    <div class="card-title" style="font-family:${font.family};text-shadow:0 0 20px ${theme.accent}55">LIVESTREAM<br>SCHEDULE</div>
+    <div class="card-subtitle-date" style="color:${theme.subtitleColor};font-family:${font.family}">${date}</div>
+
+    <div class="days-grid">${topDays.map((d,i) => dayCardHTML(d, DAYS[i])).join('')}</div>
+    <div class="days-grid-bottom">${botDays.map((d,i) => dayCardHTML(d, DAYS[3+i])).join('')}</div>
+  `;
+}
+
+// ──────────────────────────────────────────────
+// EXPORT
+// ──────────────────────────────────────────────
+async function downloadCard() {
+  const card = document.getElementById('schedule-card');
+  // Card is 405×720 → scale ×2.667 = 1080×1920 (iPhone Story perfect)
+  const canvas = await html2canvas(card, {
+    scale: 1080 / card.offsetWidth,
+    useCORS: true,
+    allowTaint: true,
+    width: card.offsetWidth,
+    height: card.offsetHeight,
+    windowWidth: card.offsetWidth,
+    windowHeight: card.offsetHeight,
+  });
+  const link = document.createElement('a');
+  const safeName = (document.getElementById('brandName').value || 'schedule').replace(/[^a-z0-9]/gi,'_');
+  link.download = `${safeName}_iphone_story.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+renderTemplateChips();
+syncToUI();
+</script>
+</body>
+</html>

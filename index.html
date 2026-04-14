@@ -297,7 +297,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); box-sh
         <div id="days-container"></div>
 
         <button class="btn-save" onclick="saveTemplate()">💾 Save Template</button>
-        <button class="btn-download" onclick="downloadCard()">⬇ Export as Image</button>
+        <button class="btn-download" onclick="downloadCard()">📤 Save / Share Image</button>
         <div style="height:20px"></div>
       </div>
     </div>
@@ -921,22 +921,46 @@ function renderCard() {
 // EXPORT
 // ──────────────────────────────────────────────
 async function downloadCard() {
-  const card = document.getElementById('schedule-card');
-  // Card is 405×720 → scale ×2.667 = 1080×1920 (iPhone Story perfect)
-  const canvas = await html2canvas(card, {
-    scale: 1080 / card.offsetWidth,
-    useCORS: true,
-    allowTaint: true,
-    width: card.offsetWidth,
-    height: card.offsetHeight,
-    windowWidth: card.offsetWidth,
-    windowHeight: card.offsetHeight,
-  });
-  const link = document.createElement('a');
-  const safeName = (document.getElementById('brandName').value || 'schedule').replace(/[^a-z0-9]/gi,'_');
-  link.download = `${safeName}_iphone_story.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  const btn = document.querySelector('.btn-download');
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Generating...';
+  btn.disabled = true;
+
+  try {
+    const card = document.getElementById('schedule-card');
+    const canvas = await html2canvas(card, {
+      scale: 1080 / card.offsetWidth,
+      useCORS: true,
+      allowTaint: true,
+      width: card.offsetWidth,
+      height: card.offsetHeight,
+      windowWidth: card.offsetWidth,
+      windowHeight: card.offsetHeight,
+    });
+
+    // Convert to blob for sharing / saving
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const safeName = (document.getElementById('brandName').value || 'schedule').replace(/[^a-z0-9]/gi,'_') + '_schedule.png';
+
+    // Try Web Share API first (works great on iPhone — direct save to Photos / AirDrop / IG)
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], safeName, { type: 'image/png' })] })) {
+      const file = new File([blob], safeName, { type: 'image/png' });
+      await navigator.share({ files: [file], title: 'Live Schedule' });
+    } else {
+      // Fallback for desktop: download file
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = safeName;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') console.error(e);
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
 }
 
 // ──────────────────────────────────────────────

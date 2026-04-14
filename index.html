@@ -927,36 +927,74 @@ async function downloadCard() {
   btn.disabled = true;
 
   try {
+    // Temporarily show the preview pane so html2canvas can render it
+    const wasEdit = document.body.classList.contains('view-edit');
+    if (wasEdit) {
+      document.body.classList.remove('view-edit');
+      document.body.classList.add('view-preview');
+    }
+
+    // Small delay to let the DOM repaint
+    await new Promise(r => setTimeout(r, 100));
+
     const card = document.getElementById('schedule-card');
     const canvas = await html2canvas(card, {
       scale: 1080 / card.offsetWidth,
       useCORS: true,
       allowTaint: true,
-      width: card.offsetWidth,
-      height: card.offsetHeight,
-      windowWidth: card.offsetWidth,
-      windowHeight: card.offsetHeight,
+      backgroundColor: null,
     });
 
-    // Convert to blob for sharing / saving
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    // Switch back to edit view
+    if (wasEdit) {
+      document.body.classList.remove('view-preview');
+      document.body.classList.add('view-edit');
+      document.getElementById('tog-edit').classList.add('active');
+      document.getElementById('tog-preview').classList.remove('active');
+    }
+
     const safeName = (document.getElementById('brandName').value || 'schedule').replace(/[^a-z0-9]/gi,'_') + '_schedule.png';
 
-    // Try Web Share API first (works great on iPhone — direct save to Photos / AirDrop / IG)
-    if (navigator.canShare && navigator.canShare({ files: [new File([blob], safeName, { type: 'image/png' })] })) {
+    // Method 1: Try Web Share API (iOS share sheet → save to Photos, AirDrop, IG, etc.)
+    try {
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
       const file = new File([blob], safeName, { type: 'image/png' });
-      await navigator.share({ files: [file], title: 'Live Schedule' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Live Schedule' });
+        return; // done
+      }
+    } catch (shareErr) {
+      if (shareErr.name === 'AbortError') return; // user cancelled share
+      console.log('Share API not available, trying fallback...');
+    }
+
+    // Method 2: Open image in new tab (works on all browsers — long-press on iPhone to save)
+    const dataUrl = canvas.toDataURL('image/png');
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      const w = window.open('');
+      if (w) {
+        w.document.write(`
+          <html><head><title>Save your schedule</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;}
+          img{max-width:90%;max-height:80vh;border-radius:12px;box-shadow:0 0 40px rgba(255,255,255,0.1);}
+          p{color:#fff;font-size:14px;margin-top:16px;opacity:0.7;text-align:center;padding:0 20px;}</style></head>
+          <body><img src="${dataUrl}"/><p>Long-press the image → Save to Photos</p></body></html>`);
+        w.document.close();
+      } else {
+        window.location.href = dataUrl;
+      }
     } else {
-      // Fallback for desktop: download file
-      const url = URL.createObjectURL(blob);
+      // Desktop fallback: direct download
       const link = document.createElement('a');
       link.download = safeName;
-      link.href = url;
+      link.href = dataUrl;
       link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
   } catch (e) {
-    if (e.name !== 'AbortError') console.error(e);
+    console.error('Export error:', e);
+    alert('Something went wrong generating the image. Try switching to Preview mode first, then tap Save again.');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
